@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 
-import javax.swing.ProgressMonitor;
+//import javax.swing.ProgressMonitor;
 
 import net.semanticmetadata.lire.DocumentBuilder;
 import net.semanticmetadata.lire.imageanalysis.bovw.LocalFeatureHistogramBuilder;
@@ -99,7 +99,7 @@ public class Main {
 		int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
 		int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
 		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
-		sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
+		//sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
 		sh.index();
 		System.out.println("Creating visual words finished.");
 		System.out.println("Now you can import data to solr by typing.");
@@ -185,7 +185,7 @@ public class Main {
 		int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
 		int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
 		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
-		sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
+		//sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
 		sh.index();
 	}
 
