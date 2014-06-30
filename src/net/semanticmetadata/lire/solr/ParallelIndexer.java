@@ -336,6 +336,42 @@ public class ParallelIndexer implements Runnable {
     }
 
     /**
+     * Extract file name (without path and suffix) from file name with path and
+     * suffix.
+     * <p>
+     * For example:
+     * <p>
+     * <ul>
+     * <li>"c:\home\abc.xml" => "abc"
+     * <li>"c:\home\abc" => "abc"
+     * <li>"/home/user/abc.xml" => "abc"
+     * <li>"/home/user/abc" => "abc"
+     * </ul>
+     * 
+     * @param filePathName
+     *            the file name with path and suffix
+     * @return the file name without path and suffix
+     */
+    public static String extractFileName( String filePathName )
+    {
+	if ( filePathName == null )
+	    return null;
+
+	int dotPos = filePathName.lastIndexOf( '.' );
+	int slashPos = filePathName.lastIndexOf( '\\' );
+	if ( slashPos == -1 )
+	    slashPos = filePathName.lastIndexOf( '/' );
+
+	if ( dotPos > slashPos )
+	    {
+		return filePathName.substring( slashPos > 0 ? slashPos + 1 : 0,
+					       dotPos );
+	    }
+
+	return filePathName.substring( slashPos > 0 ? slashPos + 1 : 0 );
+    }
+
+    /**
      * Consumers take the images prepared from the Producer and extract all the image features.
      */
     class Consumer implements Runnable {
@@ -373,7 +409,8 @@ public class ParallelIndexer implements Runnable {
                     if (!locallyEnded) {
                         ByteArrayInputStream b = new ByteArrayInputStream(tmp.getBuffer());
                         BufferedImage img = ImageIO.read(b);
-                        Document d = builder.createDocument(img, tmp.getFileName());
+			            String identifier = extractFileName(tmp.getFileName());
+                        Document d = builder.createDocument(img, identifier);
                         writer.addDocument(d);
                     }
                 } catch (Exception e) {

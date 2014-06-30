@@ -1,2 +1,10 @@
 bin
 dist
+scripts
+/nbproject/private/
+/imgdata/
+/nbproject/
+/index/
+/data/
+/logs/
+*.*

@@ -36,11 +36,13 @@ public class Main {
 
 	public static final void main(String[] args) {
 
-		if (args.length == 2 && "index".equals(args[0])) {
+		if (args.length >= 2 && "index".equals(args[0])) {
 
 			if ("index".equals(args[0])) {
 				try {
-					createIndex(args[1]);
+                    boolean createVisualWords = true;
+                    if (args.length>2) createVisualWords = Boolean.parseBoolean(args[2]);
+					createIndex(args[1], createVisualWords);
 				} catch (FileNotFoundException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -77,9 +79,10 @@ public class Main {
 		}
 	}
 
-	private static void createIndex(String imagesFile) throws FileNotFoundException, IOException {
+	private static void createIndex(String imagesFile, boolean createVisualWords) throws FileNotFoundException, IOException {
 		int numberOfThreads = Integer.parseInt(getProperties().getProperty("numberOfThreads"));
 		ParallelIndexer indexer = new ParallelIndexer(numberOfThreads, "index", new File(imagesFile)) {
+			@Override
 			public void addBuilders(ChainedDocumentBuilder builder) {
 				builder.addBuilder(new SurfDocumentBuilder());
 				builder.addBuilder(new GenericDocumentBuilder(ColorLayout.class, DocumentBuilder.FIELD_NAME_COLORLAYOUT, true));
@@ -92,16 +95,20 @@ public class Main {
 		indexer.run();
 
 		System.out.println("Indexing finished");
-		System.out.println("Creating visual words...");
-
-		IndexReader ir = DirectoryReader.open(FSDirectory.open(new File("index")));
-		LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
-		int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
-		int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
-		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
-		//sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
-		sh.index();
-		System.out.println("Creating visual words finished.");
+        
+        if (createVisualWords)
+        {
+            System.out.println("Creating visual words...");
+            IndexReader ir = DirectoryReader.open(FSDirectory.open(new File("index")));
+            LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
+            int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
+            int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
+            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
+            //sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
+            sh.index();
+            System.out.println("Creating visual words finished.");
+        }
+		
 		System.out.println("Now you can import data to solr by typing.");
 		System.out.println("java -jar indexer.jar import");
 	}
@@ -150,10 +157,13 @@ public class Main {
 
 			// SURF
 			IndexableField[] features = doc.getFields(DocumentBuilder.FIELD_NAME_SURF);
+			ArrayList<ByteBuffer> values = new ArrayList<ByteBuffer>(features.length);
 			for (IndexableField feature : features) {
 				BytesRef featureBin = feature.binaryValue();
-				inputDoc.setField("su_hi", ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
+				// inputDoc.setField("su_hi", ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
+				values.add(ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
 			}
+			inputDoc.addField("su_hi", values);
 			inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
 
 			buffer.add(inputDoc);
@@ -202,7 +212,7 @@ public class Main {
 
 	private static void printHelp() {
 		System.out.println("USAGE:");
-		System.out.println("\t index file - File contains paths to the images, which will be indexed.");
+		System.out.println("\t index file [createVisualWords]. file - File contains paths to the images, which will be indexed. createVisualWords - boolean value, whether creating visual words, true by default.");
 		System.out.println("\t import - It sends data from index to solr server specific in the config.properties file.");
 		System.out.println("\t visualwords - It creates data for visual words technique. This step is automatically execute after index step. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
 	}
