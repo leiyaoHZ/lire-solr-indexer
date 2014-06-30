@@ -53,10 +53,12 @@ public class Main {
 			} else {
 				printHelp();
 			}
-		} else if (args.length == 1) {
+		} else if (args.length >= 1) {
 			if ("import".equals(args[0])) {
 				try {
-					importIndex();
+                    boolean missingVisualWords = false;
+                    if (args.length>1) missingVisualWords = Boolean.parseBoolean(args[1]);
+					importIndex(missingVisualWords);
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -113,7 +115,7 @@ public class Main {
 		System.out.println("java -jar indexer.jar import");
 	}
 
-	private static void importIndex() throws IOException, SolrServerException {
+	private static void importIndex(boolean missingVisualWords) throws IOException, SolrServerException {
 		Properties prop = getProperties();
 		String solrCoreData = prop.getProperty("solrCoreData");
 		System.out.println("Copying clusters-surf.dat to " + solrCoreData);
@@ -124,8 +126,17 @@ public class Main {
 		SolrServer server = new HttpSolrServer(url);
 
 		Collection<SolrInputDocument> buffer = new ArrayList<>(30);
-
-		IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
+        
+        if(missingVisualWords)
+        {
+            LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
+            int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
+            int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
+            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(DirectoryReader.open(FSDirectory.open(new File("index"))), numDocsForVocabulary, numClusters);
+            sh.indexMissing();
+        }
+        
+        IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
 		for (int i = 0; i < reader.maxDoc(); ++i) {
 			Document doc = reader.document(i);
 			SolrInputDocument inputDoc = new SolrInputDocument();
@@ -164,7 +175,9 @@ public class Main {
 				values.add(ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
 			}
 			inputDoc.addField("su_hi", values);
-			inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+            
+            // SURF visual words
+            inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
 
 			buffer.add(inputDoc);
 
@@ -213,7 +226,7 @@ public class Main {
 	private static void printHelp() {
 		System.out.println("USAGE:");
 		System.out.println("\t index file [createVisualWords]. file - File contains paths to the images, which will be indexed. createVisualWords - boolean value, whether creating visual words, true by default.");
-		System.out.println("\t import - It sends data from index to solr server specific in the config.properties file.");
+		System.out.println("\t import [missingVisualWords] - It sends data from index to solr server specific in the config.properties file. If missingVisualWords==true, creating visual words using existing cluster-surf.dat. It's false by default.");
 		System.out.println("\t visualwords - It creates data for visual words technique. This step is automatically execute after index step. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
 	}
 }
