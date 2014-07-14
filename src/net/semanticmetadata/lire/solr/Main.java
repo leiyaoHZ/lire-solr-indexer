@@ -47,10 +47,12 @@ public class Main {
 				e.printStackTrace();
 				System.exit(1);
 			}
-		} else if (args.length == 2 && "import".equals(args[0])) {
+		} else if (args.length == 4 && "import".equals(args[0])) {
 			try {
                 boolean keepSurfLocalFeatures = Boolean.parseBoolean(args[1]);
-    			importIndex(keepSurfLocalFeatures);
+                int start = Integer.parseInt(args[2]);
+                int end = Integer.parseInt(args[3]);
+    			importIndex(keepSurfLocalFeatures, start, end);
 			} catch (IOException e) {
                 e.printStackTrace();
 				System.exit(1);
@@ -194,7 +196,7 @@ public class Main {
         }
     }
 
-	private static void importIndex(boolean keepSurfLocalFeatures) throws IOException, SolrServerException {
+	private static void importIndex(boolean keepSurfLocalFeatures, int start, int end) throws IOException, SolrServerException {
 		Properties prop = getProperties();
 		String solrCoreData = prop.getProperty("solrCoreData");
 		System.out.println("Copying clusters-surf.dat to " + solrCoreData);
@@ -203,11 +205,21 @@ public class Main {
 		String url = prop.getProperty("solrCoreUrl");
 		System.out.println("Load data to: " + url);
 		SolrServer server = new HttpSolrServer(url);
-
+        
 		Collection<SolrInputDocument> buffer = new ArrayList<>(30);
         IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
         Bits liveDocs = MultiFields.getLiveDocs(reader);
-		for (int i = 0; i < reader.maxDoc(); ++i) {
+        
+        if (start<0 && end<0){
+            start = 0;
+            end = reader.maxDoc();
+        }
+        else{
+            start = Math.max(0, start);
+            end = Math.min(reader.maxDoc(),end);
+        }
+        
+		for (int i = start; i < end; ++i) {
             if (reader.hasDeletions() && !liveDocs.get(i)) continue;
 			Document doc = reader.document(i);
             System.out.println("processing doc "+i+": "+doc.getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
@@ -253,7 +265,6 @@ public class Main {
             // SURF visual words
             if(doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS) != null)
             {
-                System.out.println("su_ha: "+doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
                 inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
             }
 
