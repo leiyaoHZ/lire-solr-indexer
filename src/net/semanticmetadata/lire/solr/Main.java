@@ -31,57 +31,69 @@ import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
 import org.apache.solr.common.SolrInputDocument;
+import org.apache.lucene.index.*;
+import org.apache.lucene.util.Bits;
 
 public class Main {
 
 	public static final void main(String[] args) {
 
-		if (args.length >= 2 && "index".equals(args[0])) {
-
-			if ("index".equals(args[0])) {
-				try {
-                    boolean createVisualWords = true;
-                    if (args.length>2) createVisualWords = Boolean.parseBoolean(args[2]);
-					createIndex(args[1], createVisualWords);
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-					System.exit(1);
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-			} else {
-				printHelp();
+		if (args.length == 4 && "index".equals(args[0])) {
+			try {
+                boolean createVisualWords = Boolean.parseBoolean(args[2]);
+                boolean createHistogram = Boolean.parseBoolean(args[3]);
+                createIndex(args[1], createVisualWords,createHistogram);
+            } catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
 			}
-		} else if (args.length >= 1) {
-			if ("import".equals(args[0])) {
-				try {
-                    boolean missingVisualWords = false;
-                    if (args.length>1) missingVisualWords = Boolean.parseBoolean(args[1]);
-					importIndex(missingVisualWords);
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				} catch (SolrServerException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-			} else if ("visualwords".equals(args[0])) {
-				try {
-					visualWords();
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-			} else {
-				printHelp();
+		} else if (args.length == 2 && "import".equals(args[0])) {
+			try {
+                boolean keepSurfLocalFeatures = Boolean.parseBoolean(args[1]);
+    			importIndex(keepSurfLocalFeatures);
+			} catch (IOException e) {
+                e.printStackTrace();
+				System.exit(1);
+			} catch (SolrServerException e) {
+				e.printStackTrace();
+				System.exit(1);
 			}
-		} else {
+		} else if (args.length == 4 && "indexVisualWords".equals(args[0])) {
+            try{
+                boolean createForMissing = Boolean.parseBoolean(args[1]);
+                int start = Integer.parseInt(args[2]);
+                int end = Integer.parseInt(args[3]);
+                indexVisualWords(createForMissing, start, end);
+            } catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			} catch (SolrServerException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+        }else if (args.length == 1 && "visualwords".equals(args[0])) {
+			try {
+				visualWords();
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		} else if (args.length == 3 && "readIndex".equals(args[0])) {
+            try {
+                int start = Integer.parseInt(args[1]);
+                int end = Integer.parseInt(args[2]);
+				readIndex(start,end);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+        }
+        else {
 			printHelp();
 		}
 	}
 
-	private static void createIndex(String imagesFile, boolean createVisualWords) throws FileNotFoundException, IOException {
+	private static void createIndex(String imagesFile, boolean createVisualWords, boolean createHistogram) throws FileNotFoundException, IOException {
 		int numberOfThreads = Integer.parseInt(getProperties().getProperty("numberOfThreads"));
 		ParallelIndexer indexer = new ParallelIndexer(numberOfThreads, "index", new File(imagesFile)) {
 			@Override
@@ -98,24 +110,91 @@ public class Main {
 
 		System.out.println("Indexing finished");
         
-        if (createVisualWords)
-        {
-            System.out.println("Creating visual words...");
+        LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
+        if (createVisualWords){
             IndexReader ir = DirectoryReader.open(FSDirectory.open(new File("index")));
-            LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
             int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
             int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
             SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
             //sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
-            sh.index();
-            System.out.println("Creating visual words finished.");
+            if (createHistogram){
+                System.out.println("Creating visual words and histograms...");
+                sh.index();
+                System.out.println("Creating visual words and histograms finished.");
+            }
+            else{
+                System.out.println("Creating visual words...");
+                sh.createVisualWords();
+                System.out.println("Creating visual words finished.");
+            }
+        }
+        else if(createHistogram){
+            IndexReader ir = DirectoryReader.open(FSDirectory.open(new File("index")));
+            int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
+            int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
+            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
+            System.out.println("Creating histograms for all...");
+            int indexBatchSize = Integer.parseInt(getProperties().getProperty("indexBatchSize"));
+            int batchNum = (int)Math.ceil(1.0*ir.maxDoc()/indexBatchSize);
+            System.out.println(batchNum+" batches in total...");
+            boolean createForMissing = false;
+            for (int i=0; i<batchNum-1; i++){
+                System.out.println("Batch "+i+" - creating histograms for docs "+i*indexBatchSize+"..."+((i+1)*indexBatchSize-1));
+                sh.batchIndexUsingExistingClusters(i*indexBatchSize,(i+1)*indexBatchSize,createForMissing);
+            }
+            if(batchNum>0) {
+                System.out.println("Batch "+(batchNum-1)+" - creating missing histograms for docs "+(batchNum-1)*indexBatchSize+"..."+(ir.maxDoc()-1));
+                sh.batchIndexUsingExistingClusters((batchNum-1)*indexBatchSize,ir.maxDoc(), createForMissing);
+            }
+            System.out.println("Creating histograms finished.");
         }
 		
 		System.out.println("Now you can import data to solr by typing.");
-		System.out.println("java -jar indexer.jar import");
+		System.out.println("java -jar indexer.jar import missingVisualWords keepSurfLocalFeatures");
 	}
+    
+    private static void indexVisualWords(boolean createForMissing, int start, int end) throws IOException, SolrServerException {
+        LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
+        IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
+        Properties prop = getProperties();
+        int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
+        int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
+        SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(reader, numDocsForVocabulary, numClusters);
+        System.out.println("Creating missing histograms only...");
+        sh.batchIndexUsingExistingClusters(start,end, createForMissing);
+        System.out.println("Creating histograms finished.");
+    }
+    
+    private static void readIndex(int start, int end) throws IOException {
+        IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
+        
+        if (start<0 && end<0){
+            System.out.println("Total # documents in index "+reader.maxDoc());
+            return;
+        }
+        
+        start = Math.max(0,start);
+        end = Math.min(reader.maxDoc(), end);
+        
+        Bits liveDocs = MultiFields.getLiveDocs(reader);
+		for (int i = start; i < end; ++i) {
+            if (reader.hasDeletions() && !liveDocs.get(i)){
+                System.out.println("doc "+i+" deleted.");
+                continue;
+            }
+			Document doc = reader.document(i);
+            System.out.println("reading doc "+i+": "+doc.getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
+            if(doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS) != null)
+            {
+                System.out.println("su_ha: "+doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+            }
+            else{
+                 System.out.println(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS+": field not exist.");
+            }
+        }
+    }
 
-	private static void importIndex(boolean missingVisualWords) throws IOException, SolrServerException {
+	private static void importIndex(boolean keepSurfLocalFeatures) throws IOException, SolrServerException {
 		Properties prop = getProperties();
 		String solrCoreData = prop.getProperty("solrCoreData");
 		System.out.println("Copying clusters-surf.dat to " + solrCoreData);
@@ -126,19 +205,12 @@ public class Main {
 		SolrServer server = new HttpSolrServer(url);
 
 		Collection<SolrInputDocument> buffer = new ArrayList<>(30);
-        
-        if(missingVisualWords)
-        {
-            LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
-            int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
-            int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
-            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(DirectoryReader.open(FSDirectory.open(new File("index"))), numDocsForVocabulary, numClusters);
-            sh.indexMissing();
-        }
-        
         IndexReader reader = DirectoryReader.open(FSDirectory.open(new File("index")));
+        Bits liveDocs = MultiFields.getLiveDocs(reader);
 		for (int i = 0; i < reader.maxDoc(); ++i) {
+            if (reader.hasDeletions() && !liveDocs.get(i)) continue;
 			Document doc = reader.document(i);
+            System.out.println("processing doc "+i+": "+doc.getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
 			SolrInputDocument inputDoc = new SolrInputDocument();
 			// ID
 			inputDoc.addField("id", doc.getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
@@ -167,17 +239,23 @@ public class Main {
 
 
 			// SURF
-			IndexableField[] features = doc.getFields(DocumentBuilder.FIELD_NAME_SURF);
-			ArrayList<ByteBuffer> values = new ArrayList<ByteBuffer>(features.length);
-			for (IndexableField feature : features) {
-				BytesRef featureBin = feature.binaryValue();
-				// inputDoc.setField("su_hi", ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
-				values.add(ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
-			}
-			inputDoc.addField("su_hi", values);
-            
+            if (keepSurfLocalFeatures)
+            {
+                IndexableField[] features = doc.getFields(DocumentBuilder.FIELD_NAME_SURF);
+                ArrayList<ByteBuffer> values = new ArrayList<ByteBuffer>(features.length);
+                for (IndexableField feature : features) {
+                    BytesRef featureBin = feature.binaryValue();
+                    // inputDoc.setField("su_hi", ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
+                    values.add(ByteBuffer.wrap(featureBin.bytes, featureBin.offset, featureBin.length));
+                }
+                inputDoc.addField("su_hi", values);
+            }
             // SURF visual words
-            inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+            if(doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS) != null)
+            {
+                System.out.println("su_ha: "+doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+                inputDoc.addField("su_ha", doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+            }
 
 			buffer.add(inputDoc);
 
@@ -186,6 +264,8 @@ public class Main {
 				server.add(buffer);
 				buffer.clear();
 			}
+            
+            System.out.println("Done processing doc "+i);
 		}
 
 		if (buffer.size() > 0) {
@@ -209,7 +289,8 @@ public class Main {
 		int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
 		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
 		//sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
-		sh.index();
+		//sh.index();
+        sh.createVisualWords();
 	}
 
 	private static Properties getProperties() {
@@ -225,8 +306,9 @@ public class Main {
 
 	private static void printHelp() {
 		System.out.println("USAGE:");
-		System.out.println("\t index file [createVisualWords]. file - File contains paths to the images, which will be indexed. createVisualWords - boolean value, whether creating visual words, true by default.");
-		System.out.println("\t import [missingVisualWords] - It sends data from index to solr server specific in the config.properties file. If missingVisualWords==true, creating visual words using existing cluster-surf.dat. It's false by default.");
-		System.out.println("\t visualwords - It creates data for visual words technique. This step is automatically execute after index step. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
+		System.out.println("\t index file createVisualWords createHistogram \n\t\t file - File contains paths to the images, which will be indexed. \n\t\t createVisualWords - boolean value, whether creating visual words. \n\t\t createHistogram - boolean value, whether creating histogram.");
+		System.out.println("\t import keepSurfLocalFeatures \n\t\t It sends data from index to solr server specific in the config.properties file. \n\t\t keepSurfLocalFeatures - boolean, if true, keep SURF features in index.");
+		System.out.println("\t visualwords \n\t\t It creates data for visual words technique. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
+        System.out.println("\t indexVisualWords createForMissing start end\n\t\t It creates data for visual words technique. ");
 	}
 }
