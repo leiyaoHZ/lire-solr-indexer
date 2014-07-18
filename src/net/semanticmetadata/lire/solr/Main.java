@@ -89,12 +89,12 @@ public class Main {
 				e.printStackTrace();
 				System.exit(1);
 			}
-        }
+        } 
         else {
 			printHelp();
 		}
 	}
-
+    
 	private static void createIndex(String imagesFile, boolean createVisualWords, boolean createHistogram) throws FileNotFoundException, IOException {
 		int numberOfThreads = Integer.parseInt(getProperties().getProperty("numberOfThreads"));
 		ParallelIndexer indexer = new ParallelIndexer(numberOfThreads, "index", new File(imagesFile)) {
@@ -318,8 +318,10 @@ public class Main {
 	private static void printHelp() {
 		System.out.println("USAGE:");
 		System.out.println("\t index file createVisualWords createHistogram \n\t\t file - File contains paths to the images, which will be indexed. \n\t\t createVisualWords - boolean value, whether creating visual words. \n\t\t createHistogram - boolean value, whether creating histogram.");
-		System.out.println("\t import keepSurfLocalFeatures \n\t\t It sends data from index to solr server specific in the config.properties file. \n\t\t keepSurfLocalFeatures - boolean, if true, keep SURF features in index.");
+		System.out.println("\t import keepSurfLocalFeatures start end \n\t\t It sends data from index to solr server specific in the config.properties file. \n\t\t keepSurfLocalFeatures - boolean, if true, keep SURF features in index.");
 		System.out.println("\t visualwords \n\t\t It creates data for visual words technique. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
         System.out.println("\t indexVisualWords createForMissing start end\n\t\t It creates data for visual words technique. ");
+        System.out.println("\t readIndex start end \n\t\t print out docs in index.");
+        
 	}
 }
