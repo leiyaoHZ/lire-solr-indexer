@@ -120,7 +120,7 @@ public class Main {
                 }
             }
             if (i%1000==0) {
-                System.out.println("read "+(i/ir.maxDoc()*100)+"%...");
+                System.out.println("read "+(1.0*i/ir.maxDoc()*100)+"%...");
             }
         }
 		
