@@ -89,11 +89,42 @@ public class Main {
 				e.printStackTrace();
 				System.exit(1);
 			}
-        } 
+        } else if (args.length == 2 && "readDoc".equals(args[0])) {
+            try {
+                String id = args[1];
+                readDoc(id);
+            } catch (IOException e) {
+                e.printStackTrace();
+				System.exit(1);
+            }
+        }
         else {
 			printHelp();
 		}
 	}
+    
+    private static void readDoc(String id) throws IOException {
+        IndexReader ir = DirectoryReader.open(FSDirectory.open(new File("index")));
+        for (int i=0; i<ir.maxDoc(); i++)
+        {
+            Document doc = ir.document(i);
+            String did = doc.getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue();
+            if(did.equals(id)) {
+                if(doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS) != null)
+                {
+                    System.out.println("doc "+i+" - id "+id);
+                    System.out.println("su_ha: "+doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
+                }
+                else{
+                    System.out.println(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS+": field not exist.");
+                }
+            }
+            if (i%1000==0) {
+                System.out.println("read "+(i/ir.maxDoc()*100)+"%...");
+            }
+        }
+		
+    }
     
 	private static void createIndex(String imagesFile, boolean createVisualWords, boolean createHistogram) throws FileNotFoundException, IOException {
 		int numberOfThreads = Integer.parseInt(getProperties().getProperty("numberOfThreads"));
@@ -322,6 +353,6 @@ public class Main {
 		System.out.println("\t visualwords \n\t\t It creates data for visual words technique. You can execute this step again if you want to create visual words with other parameters specific in config.properties file.");
         System.out.println("\t indexVisualWords createForMissing start end\n\t\t It creates data for visual words technique. ");
         System.out.println("\t readIndex start end \n\t\t print out docs in index.");
-        
+        System.out.println("\t readDoc id \n\t\t print out a doc in index.");
 	}
 }
