@@ -280,9 +280,9 @@ public class Main {
 			inputDoc.addField("ph_hi", ByteBuffer.wrap(phHiBin.bytes, phHiBin.offset, phHiBin.length));
 			inputDoc.addField("ph_ha", doc.getField(DocumentBuilder.FIELD_NAME_PHOG + GenericDocumentBuilder.HASH_FIELD_SUFFIX).stringValue());
 
-			BytesRef ohHiBin = doc.getField(DocumentBuilder.FIELD_NAME_OPPONENT_HISTOGRAM).binaryValue();
-			inputDoc.addField("oh_hi", ByteBuffer.wrap(ohHiBin.bytes, ohHiBin.offset, ohHiBin.length));
-			inputDoc.addField("oh_ha", doc.getField(DocumentBuilder.FIELD_NAME_OPPONENT_HISTOGRAM + GenericDocumentBuilder.HASH_FIELD_SUFFIX).stringValue());
+//			BytesRef ohHiBin = doc.getField(DocumentBuilder.FIELD_NAME_OPPONENT_HISTOGRAM).binaryValue();
+//			inputDoc.addField("oh_hi", ByteBuffer.wrap(ohHiBin.bytes, ohHiBin.offset, ohHiBin.length));
+//			inputDoc.addField("oh_ha", doc.getField(DocumentBuilder.FIELD_NAME_OPPONENT_HISTOGRAM + GenericDocumentBuilder.HASH_FIELD_SUFFIX).stringValue());
 
 			BytesRef jcHiBin = doc.getField(DocumentBuilder.FIELD_NAME_JCD).binaryValue();
 			inputDoc.addField("jc_hi", ByteBuffer.wrap(jcHiBin.bytes, jcHiBin.offset, jcHiBin.length));
