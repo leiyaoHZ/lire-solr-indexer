@@ -37,25 +37,28 @@ import org.apache.lucene.util.Bits;
 public class Main {
 
     private static String indexDir = "index";
+    private static String propFileLoc = "./config.properties";
     
 	public static final void main(String[] args) {
 
-		if (args.length == 5 && "index".equals(args[0])) {
+		if (args.length >= 4 && "index".equals(args[0])) {
 			try {
                 boolean createVisualWords = Boolean.parseBoolean(args[2]);
                 boolean createHistogram = Boolean.parseBoolean(args[3]);
-                indexDir = args[4];
+                if (args.length>=5) indexDir = args[4];
+                if (args.length>=6) propFileLoc = args[5];
                 createIndex(args[1], createVisualWords,createHistogram);
             } catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
-		} else if (args.length == 5 && "import".equals(args[0])) {
+		} else if (args.length >= 4 && "import".equals(args[0])) {
 			try {
                 boolean keepSurfLocalFeatures = Boolean.parseBoolean(args[1]);
                 int start = Integer.parseInt(args[2]);
                 int end = Integer.parseInt(args[3]);
-                indexDir = args[4];
+                if (args.length>=5) indexDir = args[4];
+                if (args.length>=6) propFileLoc = args[5];
     			importIndex(keepSurfLocalFeatures, start, end);
 			} catch (IOException e) {
                 e.printStackTrace();
@@ -64,12 +67,13 @@ public class Main {
 				e.printStackTrace();
 				System.exit(1);
 			}
-		} else if (args.length == 5 && "indexVisualWords".equals(args[0])) {
+		} else if (args.length >= 4 && "indexVisualWords".equals(args[0])) {
             try{
                 boolean createForMissing = Boolean.parseBoolean(args[1]);
                 int start = Integer.parseInt(args[2]);
                 int end = Integer.parseInt(args[3]);
-                indexDir = args[4];
+                if (args.length>=5) indexDir = args[4];
+                if (args.length>=6) propFileLoc = args[5];
                 indexVisualWords(createForMissing, start, end);
             } catch (IOException e) {
 				e.printStackTrace();
@@ -78,28 +82,31 @@ public class Main {
 				e.printStackTrace();
 				System.exit(1);
 			}
-        }else if (args.length == 2 && "visualwords".equals(args[0])) {
+        }else if (args.length >= 1 && "visualwords".equals(args[0])) {
 			try {
-                indexDir = args[1];
+                if (args.length>=2) indexDir = args[1];
+                if (args.length>=3) propFileLoc = args[3];
 				visualWords();
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
-		} else if (args.length == 4 && "readIndex".equals(args[0])) {
+		} else if (args.length >= 3 && "readIndex".equals(args[0])) {
             try {
                 int start = Integer.parseInt(args[1]);
                 int end = Integer.parseInt(args[2]);
-                indexDir = args[3];
+                if (args.length>=4) indexDir = args[3];
+                if (args.length>=5) propFileLoc = args[4];
 				readIndex(start,end);
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
-        } else if (args.length == 3 && "readDoc".equals(args[0])) {
+        } else if (args.length >= 2 && "readDoc".equals(args[0])) {
             try {
                 String id = args[1];
-                indexDir = args[2];
+                if (args.length>=3) indexDir = args[2];
+                if (args.length>=4) propFileLoc = args[3];
                 readDoc(id);
             } catch (IOException e) {
                 e.printStackTrace();
