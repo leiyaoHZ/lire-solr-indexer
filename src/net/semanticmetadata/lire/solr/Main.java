@@ -356,7 +356,7 @@ public class Main {
 		Properties prop = new Properties();
 
 		try {
-			prop.load(new FileInputStream("./config.properties"));
+			prop.load(new FileInputStream(propFileLoc));
 		} catch (IOException e) {
 			System.out.println("Cannot read config.properties file.");
 		}
