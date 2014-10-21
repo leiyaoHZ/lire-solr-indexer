@@ -38,6 +38,7 @@ public class Main {
 
     private static String indexDir = "index";
     private static String propFileLoc = "./config.properties";
+    private static String clusterLoc = "./clusters-surf.dat";
     
 	public static final void main(String[] args) {
 
@@ -47,6 +48,7 @@ public class Main {
                 boolean createHistogram = Boolean.parseBoolean(args[3]);
                 if (args.length>=5) indexDir = args[4];
                 if (args.length>=6) propFileLoc = args[5];
+                if (args.length>=7) clusterLoc = args[6];
                 createIndex(args[1], createVisualWords,createHistogram);
             } catch (IOException e) {
 				e.printStackTrace();
@@ -74,6 +76,7 @@ public class Main {
                 int end = Integer.parseInt(args[3]);
                 if (args.length>=5) indexDir = args[4];
                 if (args.length>=6) propFileLoc = args[5];
+                if (args.length>=7) clusterLoc = args[6];
                 indexVisualWords(createForMissing, start, end);
             } catch (IOException e) {
 				e.printStackTrace();
@@ -85,7 +88,8 @@ public class Main {
         }else if (args.length >= 1 && "visualwords".equals(args[0])) {
 			try {
                 if (args.length>=2) indexDir = args[1];
-                if (args.length>=3) propFileLoc = args[3];
+                if (args.length>=3) propFileLoc = args[2];
+                if (args.length>=4) clusterLoc = args[3];
 				visualWords();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -163,7 +167,7 @@ public class Main {
             IndexReader ir = DirectoryReader.open(FSDirectory.open(new File(indexDir)));
             int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
             int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
-            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
+            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters, clusterLoc);
             //sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
             if (createHistogram){
                 System.out.println("Creating visual words and histograms...");
@@ -180,7 +184,7 @@ public class Main {
             IndexReader ir = DirectoryReader.open(FSDirectory.open(new File(indexDir)));
             int numDocsForVocabulary = Integer.parseInt(getProperties().getProperty("numDocsForVocabulary"));
             int numClusters = Integer.parseInt(getProperties().getProperty("numClusters"));
-            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
+            SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters, clusterLoc);
             System.out.println("Creating histograms for all...");
             int indexBatchSize = Integer.parseInt(getProperties().getProperty("indexBatchSize"));
             int batchNum = (int)Math.ceil(1.0*ir.maxDoc()/indexBatchSize);
@@ -207,7 +211,7 @@ public class Main {
         Properties prop = getProperties();
         int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
         int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
-        SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(reader, numDocsForVocabulary, numClusters);
+        SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(reader, numDocsForVocabulary, numClusters, clusterLoc);
         System.out.println("Creating missing histograms only...");
         sh.batchIndexUsingExistingClusters(start,end, createForMissing);
         System.out.println("Creating histograms finished.");
@@ -346,7 +350,7 @@ public class Main {
 		LocalFeatureHistogramBuilder.DELETE_LOCAL_FEATURES = false;
 		int numDocsForVocabulary = Integer.parseInt(prop.getProperty("numDocsForVocabulary"));
 		int numClusters = Integer.parseInt(prop.getProperty("numClusters"));
-		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters);
+		SurfFeatureHistogramBuilder sh = new SurfFeatureHistogramBuilder(ir, numDocsForVocabulary, numClusters, clusterLoc);
 		//sh.setProgressMonitor(new ProgressMonitor(null, "", "", 0, 100));
 		//sh.index();
         sh.createVisualWords();
