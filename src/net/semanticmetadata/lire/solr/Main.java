@@ -61,7 +61,10 @@ public class Main {
                 int end = Integer.parseInt(args[3]);
                 if (args.length>=5) indexDir = args[4];
                 if (args.length>=6) propFileLoc = args[5];
-    			importIndex(keepSurfLocalFeatures, start, end);
+                if (args.length>=7) clusterLoc = args[6];
+                boolean copyClusterFile = true; 
+                if (args.length>=8) copyClusterFile = Boolean.parseBoolean(args[7]);
+    			importIndex(keepSurfLocalFeatures, start, end, copyClusterFile);
 			} catch (IOException e) {
                 e.printStackTrace();
 				System.exit(1);
@@ -240,17 +243,18 @@ public class Main {
             {
                 System.out.println("su_ha: "+doc.getField(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS).stringValue());
             }
-            else{
+            else
+            {
                  System.out.println(DocumentBuilder.FIELD_NAME_SURF_VISUAL_WORDS+": field not exist.");
             }
         }
     }
 
-	private static void importIndex(boolean keepSurfLocalFeatures, int start, int end) throws IOException, SolrServerException {
+	private static void importIndex(boolean keepSurfLocalFeatures, int start, int end, boolean copyClusterFile) throws IOException, SolrServerException {
 		Properties prop = getProperties();
 		String solrCoreData = prop.getProperty("solrCoreData");
 		System.out.println("Copying clusters-surf.dat to " + solrCoreData);
-		FileUtils.copyFile(new File("clusters-surf.dat"), new File(solrCoreData + "/clusters-surf.dat"));
+		if(copyClusterFile) FileUtils.copyFile(new File(clusterLoc), new File(solrCoreData + "/clusters-surf.dat"));
 
 		String url = prop.getProperty("solrCoreUrl");
 		System.out.println("Load data to: " + url);
