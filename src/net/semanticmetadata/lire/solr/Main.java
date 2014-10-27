@@ -253,8 +253,11 @@ public class Main {
 	private static void importIndex(boolean keepSurfLocalFeatures, int start, int end, boolean copyClusterFile) throws IOException, SolrServerException {
 		Properties prop = getProperties();
 		String solrCoreData = prop.getProperty("solrCoreData");
-		System.out.println("Copying clusters-surf.dat to " + solrCoreData);
-		if(copyClusterFile) FileUtils.copyFile(new File(clusterLoc), new File(solrCoreData + "/clusters-surf.dat"));
+        if (copyClusterFile)
+        {
+            System.out.println("Copying clusters-surf.dat to " + solrCoreData);
+            FileUtils.copyFile(new File(clusterLoc), new File(solrCoreData + "/clusters-surf.dat"));
+        }
 
 		String url = prop.getProperty("solrCoreUrl");
 		System.out.println("Load data to: " + url);
